@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de registros</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0F1B1F;
+    --panel:#16262B;
+    --amber:#E8A33D;
+    --sage:#9CCFC2;
+    --cream:#F2EFE6;
+    --muted:#8FA3A0;
+    --line:rgba(242,239,230,0.12);
+    --danger:#E8917A;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink);
+    color:var(--cream);
+    font-family:'Work Sans', sans-serif;
+    min-height:100vh;
+    padding:48px 20px;
+  }
+  .wrap{
+    max-width:880px;
+    margin:0 auto;
+  }
+  .top{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:28px;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    font-size:28px;
+    margin:0;
+  }
+  .count{
+    color:var(--sage);
+    font-size:14px;
+  }
+  table{
+    width:100%;
+    border-collapse:collapse;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    overflow:hidden;
+  }
+  thead th{
+    text-align:left;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--sage);
+    padding:14px 18px;
+    border-bottom:1px solid var(--line);
+  }
+  tbody td{
+    padding:14px 18px;
+    font-size:14px;
+    border-bottom:1px solid var(--line);
+    vertical-align:middle;
+  }
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:rgba(242,239,230,0.03);}
+  .fecha{color:var(--muted); font-size:13px;}
+  .correo{color:var(--sage);}
+  .del{
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--danger);
+    font-size:12px;
+    padding:6px 10px;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  .del:hover{border-color:var(--danger);}
+  .empty{
+    text-align:center;
+    padding:60px 20px;
+    color:var(--muted);
+    font-size:14px;
+  }
+  .refresh{
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--cream);
+    font-size:13px;
+    padding:8px 16px;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  .refresh:hover{border-color:var(--amber); color:var(--amber);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>Registros</h1>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <span class="count" id="count"></span>
+      <button class="refresh" id="refresh">Actualizar</button>
+    </div>
+  </div>
+
+  <div id="tableWrap"></div>
+</div>
+
+<script>
+  async function cargar(){
+    const resp = await fetch('/api/registros');
+    const registros = await resp.json();
+    document.getElementById('count').textContent = registros.length + ' registrado' + (registros.length === 1 ? '' : 's');
+
+    const tableWrap = document.getElementById('tableWrap');
+
+    if (registros.length === 0){
+      tableWrap.innerHTML = '<div class="empty">Todavía no hay registros. En cuanto alguien se registre, aparecerá aquí.</div>';
+      return;
+    }
+
+    let html = '<table><thead><tr><th>Usuario</th><th>Correo</th><th>Fecha</th><th></th></tr></thead><tbody>';
+    for (const r of registros){
+      const fecha = new Date(r.fecha).toLocaleString('es-ES');
+      html += '<tr>' +
+        '<td>' + escapeHtml(r.usuario) + '</td>' +
+        '<td class="correo">' + escapeHtml(r.correo) + '</td>' +
+        '<td class="fecha">' + fecha + '</td>' +
+        '<td><button class="del" data-id="' + r.id + '">Eliminar</button></td>' +
+        '</tr>';
+    }
+    html += '</tbody></table>';
+    tableWrap.innerHTML = html;
+
+    document.querySelectorAll('.del').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await fetch('/api/registro/' + btn.dataset.id, { method: 'DELETE' });
+        cargar();
+      });
+    });
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  document.getElementById('refresh').addEventListener('click', cargar);
+  cargar();
+</script>
+</body>
+</html>
